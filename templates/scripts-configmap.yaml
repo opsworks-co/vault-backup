@@ -22,5 +22,11 @@ data:
       OUTPUT_NAME=${INPUT_NAME}
     fi
     echo "Uploading"
-    az login --identity -o none --only-show-errors --allow-no-subscriptions
-    az storage blob upload  --account-name=${STORAGE_ACCOUNT_NAME} --container-name=${STORAGE_ACCOUNT_CONTAINER} --file=/share/${INPUT_NAME} --name=${STORAGE_ACCOUNT_PREFIX}/${OUTPUT_NAME}
+    if [ -z "${CLIENT_ID}" ];
+    then
+      az login --identity -o none --only-show-errors --allow-no-subscriptions
+      az storage blob upload --account-name=${STORAGE_ACCOUNT_NAME} --container-name=${STORAGE_ACCOUNT_CONTAINER} --file=/share/${INPUT_NAME} --name=${STORAGE_ACCOUNT_PREFIX}/${OUTPUT_NAME}
+    else
+      az login --identity --username ${CLIENT_ID} -o none --only-show-errors --allow-no-subscriptions
+      az storage blob upload --account-name=${STORAGE_ACCOUNT_NAME} --container-name=${STORAGE_ACCOUNT_CONTAINER} --file=/share/${INPUT_NAME} --name=${STORAGE_ACCOUNT_PREFIX}/${OUTPUT_NAME} --auth-mode login
+    fi

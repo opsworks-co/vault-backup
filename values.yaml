@@ -23,6 +23,7 @@ storage_account:
   name: "account"
   container: "container"
   prefix: "vault/dev"
+  client_id: ""
 
 backuper:
   image:
