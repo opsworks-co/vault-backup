@@ -1,0 +1,100 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name:  {{ include "vault-backup.fullname" . }}-backup
+  labels:
+    {{- include "vault-backup.labels" . | nindent 4 }}
+    {{- with .Values.extraLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  schedule: {{ .Values.schedule }}
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 120
+      template:
+        metadata:
+          labels:
+            {{- include "vault-backup.labels" . | nindent 12 }}
+            {{- with .Values.extraLabels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.annotations }}
+          annotations:
+          {{ toYaml . | indent 4 }}
+          {{- end }}
+        spec:
+          initContainers:
+            - name: vault-cli
+              image: "{{ .Values.backuper.image.repository }}:{{ .Values.backuper.image.tag }}"
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  until vault operator raft snapshot save /share/vault.snap;
+                  do
+                    echo "Retrying to create a snapshot"
+                  done
+              env:
+                - name: VAULT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: VAULT_TOKEN
+                      name: {{ .Release.Name }}-env
+                - name: VAULT_ADDR
+                  value: {{ .Values.vault.address }}
+              resources:
+              {{- toYaml .Values.backuper.resources | nindent 16 }}
+              volumeMounts:
+                - mountPath: /share
+                  name: share
+          {{- if .Values.serviceAccount.enabled }}
+          serviceAccountName: {{ include "vault-backup.fullname" . }}-backup
+          {{- end }}
+          containers:
+            - name: uploader
+              image: "{{ .Values.uploader.image.repository }}:{{ .Values.uploader.image.tag }}"
+              env:
+                - name: STORAGE_ACCOUNT_NAME
+                  value: {{ .Values.storage_account.name }}
+                - name: STORAGE_ACCOUNT_CONTAINER
+                  value: {{ .Values.storage_account.container }}
+                - name: STORAGE_ACCOUNT_PREFIX
+                  value: {{ .Values.storage_account.prefix }}
+                - name: ENCRYPTION_ENABLED
+                  value: {{ .Values.encryption.enabled }}
+                - name: ENCRYPTION_PASSWORD
+                  value: {{ .Values.encryption.password }}
+              command:
+                - /bin/sh
+                - -c
+              args:
+                - /app/scripts/backup.sh
+              volumeMounts:
+                - mountPath: /share
+                  name: share
+                - mountPath: /app/scripts
+                  name: scripts
+              resources:
+              {{- toYaml .Values.uploader.resources | nindent 16 }}
+          volumes:
+            - name: share
+              emptyDir: {}
+            - name: scripts
+              configMap:
+                name: {{ .Release.Name }}-scripts
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          restartPolicy: Never

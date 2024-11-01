@@ -1,0 +1,15 @@
+{{- if .Values.serviceAccount.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "vault-backup.fullname" . }}-backup
+  labels:
+    {{- include "vault-backup.labels" . | nindent 4 }}
+  {{- if .Values.serviceAccount.extraLabels }}
+{{ toYaml .Values.serviceAccount.extraLabels | indent 4}}
+  {{- end }}
+{{- with .Values.serviceAccount.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- end }}

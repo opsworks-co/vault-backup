@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-scripts
+  labels:
+    {{- include "vault-backup.labels" . | nindent 4 }}
+    {{- with .Values.extraLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  upload.sh: |
+    #!/bin/sh
+    set -ex
+    INPUT_NAME=vault.snap
+    OUTPUT_NAME=vault_$(date +"%Y%m%d_%H%M%S").snap
+    if ${ENCRYPTION_ENABLED};
+    then
+      echo "Encrypting"
+      gpg --symmetric  --batch --yes --passphrase ${ENCRYPTION_PASSWORD} --output ${OUTPUT_NAME}.enc ${INPUT_NAME}
+      INPUT_NAME=${OUTPUT_NAME}.enc
+      OUTPUT_NAME=${INPUT_NAME}
+    fi
+    echo "Uploading"
+    az login --identity -o none --only-show-errors --allow-no-subscriptions
+    az storage blob upload  --account-name=${STORAGE_ACCOUNT_NAME} --container-name=${STORAGE_ACCOUNT_CONTAINER} --file=/share/${INPUT_NAME} --name=${STORAGE_ACCOUNT_PREFIX}/${OUTPUT_NAME}

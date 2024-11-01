@@ -1,0 +1,53 @@
+# Default values for vault-backup.
+extraLabels:
+  {}
+  # azure.workload.identity/use: "true"
+
+serviceAccount:
+  enabled: true
+  extraLabels:
+    {}
+    # azure.workload.identity/use: "true"
+
+schedule: "0 3 * * *"
+
+vault:
+  address: http://vault:8200
+  token: mytoken
+
+encryption:
+  enabled: true
+  password: password
+
+storage_account:
+  name: "account"
+  container: "container"
+  prefix: "vault/dev"
+
+backuper:
+  image:
+    repository: hashicorp/vault
+    tag: "1.14.8"
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "100m"
+    limits:
+      memory: "128Mi"
+      cpu: "250m"
+
+uploader:
+  image:
+    repository: mcr.microsoft.com/azure-cli
+    tag: "latest"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 500Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
