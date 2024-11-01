@@ -11,6 +11,7 @@ data:
   upload.sh: |
     #!/bin/sh
     set -ex
+    cd /share
     INPUT_NAME=vault.snap
     OUTPUT_NAME=vault_$(date +"%Y%m%d_%H%M%S").snap
     if ${ENCRYPTION_ENABLED};

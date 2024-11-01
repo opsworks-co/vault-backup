@@ -38,13 +38,11 @@ spec:
                     echo "Retrying to create a snapshot"
                   done
               env:
-                - name: VAULT_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      key: VAULT_TOKEN
-                      name: {{ .Release.Name }}-env
                 - name: VAULT_ADDR
                   value: {{ .Values.vault.address }}
+              envFrom:
+                - secretRef:
+                    name: {{ .Release.Name }}-env
               resources:
               {{- toYaml .Values.backuper.resources | nindent 16 }}
               volumeMounts:
@@ -64,14 +62,16 @@ spec:
                 - name: STORAGE_ACCOUNT_PREFIX
                   value: {{ .Values.storage_account.prefix }}
                 - name: ENCRYPTION_ENABLED
-                  value: {{ .Values.encryption.enabled }}
-                - name: ENCRYPTION_PASSWORD
-                  value: {{ .Values.encryption.password }}
+                  value: {{ quote .Values.encryption.enabled }}
+              envFrom:
+                - secretRef:
+                    name: {{ .Release.Name }}-env
+              # command: ["sleep", "infinity"]
               command:
                 - /bin/sh
                 - -c
               args:
-                - /app/scripts/backup.sh
+                - /app/scripts/upload.sh
               volumeMounts:
                 - mountPath: /share
                   name: share
@@ -85,6 +85,7 @@ spec:
             - name: scripts
               configMap:
                 name: {{ .Release.Name }}-scripts
+                defaultMode: 0777
           {{- with .Values.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}
